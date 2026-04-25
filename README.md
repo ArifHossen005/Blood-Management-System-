@@ -329,8 +329,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Arif Hossen**
 
 - GitHub: [@ArifHossen005](https://github.com/ArifHossen005)
-- Email: arif.hossen@example.com
-- LinkedIn: [Arif Hossen](https://linkedin.com/in/arifhossen)
+- Email: md.arif.hossen.edu@gmail.com
+- LinkedIn: [Arif Hossen](https://www.linkedin.com/in/md-arif-hossen-0505a6216/)
 
 ---
 
@@ -344,7 +344,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email arif.hossen@example.com or open an issue in the repository.
+For support, email md.arif.hossen.edu@gmail.com or open an issue in the repository.
 
 ---
 
