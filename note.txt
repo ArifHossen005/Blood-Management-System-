@@ -1,0 +1,12 @@
+🔐 Auth (যে কেউ)
+URLকী করেhttp://127.0.0.1:8000/loginলগইন পেজhttp://127.0.0.1:8000/registerরেজিস্ট্রেশন পেজ
+👨‍💼 Admin
+URLকী করেhttp://127.0.0.1:8000/admin/dashboardড্যাশবোর্ডhttp://127.0.0.1:8000/admin/donorsডোনার তালিকাhttp://127.0.0.1:8000/admin/blood-requestsরক্তের অনুরোধhttp://127.0.0.1:8000/admin/donation-historiesদানের ইতিহাস
+🩸 Donor
+URLকী করেhttp://127.0.0.1:8000/donor/dashboardড্যাশবোর্ডhttp://127.0.0.1:8000/donor/bloodরক্তদাতা তালিকাhttp://127.0.0.1:8000/donor/profileপ্রোফাইলhttp://127.0.0.1:8000/donor/donationsদানের ইতিহাসhttp://127.0.0.1:8000/donor/blood-requestsরক্তের অনুরোধ
+
+
+
+adress dynamic 
+ban vs english 
+hospital dynamic 
