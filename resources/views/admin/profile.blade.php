@@ -45,6 +45,76 @@
         </div>
     </div>
 
+    {{-- Donor Profile Section --}}
+    <div class="col-12">
+        <div class="table-card p-4">
+            <h6 class="fw-bold mb-1"><i class="bi bi-droplet-fill text-danger me-2"></i>{{ __('ui.profile.donor_profile') }}</h6>
+            <p class="text-muted mb-3" style="font-size:.82rem;">{{ __('ui.profile.donor_profile_hint') }}</p>
+            <form method="POST" action="{{ route('admin.donor-profile.update') }}">
+                @csrf @method('PUT')
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.blood_group') }}</label>
+                        <select class="form-select" name="blood_group">
+                            <option value="">{{ __('ui.common.select') }}</option>
+                            @foreach(['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg)
+                                <option value="{{ $bg }}" {{ $user->blood_group === $bg ? 'selected' : '' }}>{{ $bg }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.gender') }}</label>
+                        <select class="form-select" name="gender">
+                            <option value="">{{ __('ui.common.select') }}</option>
+                            <option value="male"   {{ $user->gender === 'male'   ? 'selected' : '' }}>{{ __('ui.gender.male') }}</option>
+                            <option value="female" {{ $user->gender === 'female' ? 'selected' : '' }}>{{ __('ui.gender.female') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.date_of_birth') }}</label>
+                        <input type="date" class="form-control" name="date_of_birth"
+                               value="{{ old('date_of_birth', $user->date_of_birth?->format('Y-m-d')) }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.weight') }}</label>
+                        <input type="number" class="form-control" name="weight" min="30" max="200"
+                               value="{{ old('weight', $user->weight) }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.district') }}</label>
+                        <input type="text" class="form-control" name="district"
+                               value="{{ old('district', $user->district) }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.division') }}</label>
+                        <input type="text" class="form-control" name="division"
+                               value="{{ old('division', $user->division) }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch ps-0 w-100">
+                            <label class="form-label fw-semibold d-block">{{ __('ui.profile.availability') }}</label>
+                            <input class="form-check-input ms-0" type="checkbox" name="is_available"
+                                   value="1" {{ $user->is_available ? 'checked' : '' }} style="width:2.5rem;height:1.3rem;">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.health_notes') }}</label>
+                        <textarea class="form-control" name="health_notes" rows="2">{{ old('health_notes', $user->health_notes) }}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-blood btn-sm"><i class="bi bi-droplet me-2"></i>{{ __('ui.profile.update_cta') }}</button>
+                        @if($user->blood_group)
+                            <span class="ms-3 badge badge-blood px-3 py-2">{{ $user->blood_group }}</span>
+                            @if($user->is_available)
+                                <span class="badge bg-success ms-1"><i class="bi bi-check-circle me-1"></i>{{ __('ui.profile.availability') }}</span>
+                            @endif
+                        @endif
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- Sidebar Info & Password --}}
     <div class="col-lg-4">
         {{-- Account Info --}}

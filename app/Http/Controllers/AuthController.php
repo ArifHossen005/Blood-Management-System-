@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\NewDonorRegistered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -64,6 +65,14 @@ class AuthController extends Controller
         $validated['status']   = 'temporary'; // needs admin approval
 
         $user = User::create($validated);
+
+        User::where('role', 'admin')
+            ->orWhere(function ($q) {
+                $q->where('role', 'sub_admin')
+                  ->whereJsonContains('permissions', 'approve_donors');
+            })
+            ->get()
+            ->each(fn($admin) => $admin->notify(new NewDonorRegistered($user)));
 
         Auth::login($user);
 

@@ -4,10 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\BloodRequest;
+use App\Models\DonationClaim;
 use App\Models\DonationHistory;
+use App\Notifications\BloodRequestStatusUpdated;
+use App\Notifications\DonationClaimApproved;
+use App\Notifications\DonationClaimRejected;
+use App\Notifications\DonationStatusUpdated;
+use App\Notifications\DonorApproved;
+use App\Notifications\DonorBanned;
+use App\Notifications\DonorRejected;
+use App\Notifications\NewBloodRequestCreated;
+use App\Notifications\NewDonationClaimSubmitted;
+use App\Notifications\NewDonationSubmitted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Barryvdh\DomPDF\Facade\Pdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AdminController extends Controller
 {
@@ -46,6 +59,30 @@ class AdminController extends Controller
         } else {
             unset($validated['profile_image']);
         }
+
+        $user->update($validated);
+
+        Auth::setUser($user->fresh());
+
+        return back()->with('success', __('ui.messages.profile_updated'));
+    }
+
+    public function updateDonorProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'blood_group'   => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'gender'        => 'nullable|in:male,female',
+            'date_of_birth' => 'nullable|date|before:today',
+            'district'      => 'nullable|string|max:100',
+            'division'      => 'nullable|string|max:100',
+            'weight'        => 'nullable|numeric|min:30|max:200',
+            'health_notes'  => 'nullable|string|max:1000',
+            'is_available'  => 'nullable|boolean',
+        ]);
+
+        $validated['is_available'] = $request->boolean('is_available');
 
         $user->update($validated);
 
@@ -131,18 +168,22 @@ class AdminController extends Controller
             'approved_by' => auth()->id(),
         ]);
 
+        $user->notify(new DonorApproved());
+
         return back()->with('success', __('ui.messages.donor_approved', ['name' => $user->name]));
     }
 
     public function rejectDonor(User $user)
     {
         $user->update(['status' => 'rejected']);
+        $user->notify(new DonorRejected());
         return back()->with('success', __('ui.messages.donor_rejected', ['name' => $user->name]));
     }
 
     public function banDonor(User $user)
     {
         $user->update(['status' => 'banned']);
+        $user->notify(new DonorBanned());
         return back()->with('success', __('ui.messages.donor_banned', ['name' => $user->name]));
     }
 
@@ -211,7 +252,13 @@ class AdminController extends Controller
 
     public function updateBloodRequest(Request $request, BloodRequest $bloodRequest)
     {
-        $bloodRequest->update(['status' => $request->status]);
+        $newStatus = $request->status;
+        $bloodRequest->update(['status' => $newStatus]);
+
+        if ($bloodRequest->requester && in_array($newStatus, ['approved', 'fulfilled', 'cancelled'])) {
+            $bloodRequest->requester->notify(new BloodRequestStatusUpdated($bloodRequest, $newStatus));
+        }
+
         return back()->with('success', __('ui.messages.request_updated'));
     }
 
@@ -235,12 +282,221 @@ class AdminController extends Controller
             'verified_by' => auth()->id(),
         ]);
 
-        // Update donor stats
         $donor = $history->donor;
         $donor->increment('total_donations');
         $donor->update(['last_donation_date' => $history->donation_date]);
 
+        $donor->notify(new DonationStatusUpdated($history, 'verified'));
+
         return back()->with('success', __('ui.messages.donation_verified'));
+    }
+
+    // ─── Donation Claims ────────────────────────────────────────
+    public function claims(Request $request)
+    {
+        $query = DonationClaim::with('user');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $claims = $query->latest()->paginate(15)->withQueryString();
+        $pendingCount = DonationClaim::where('status', 'pending')->count();
+
+        return view('admin.claims', compact('claims', 'pendingCount'));
+    }
+
+    public function approveClaim(DonationClaim $claim)
+    {
+        if ($claim->status !== 'pending') {
+            return back()->withErrors(['claim' => __('ui.certificate.already_processed')]);
+        }
+
+        $certificateNumber = DonationClaim::generateCertificateNumber($claim->user_id);
+
+        $claim->update([
+            'status'             => 'approved',
+            'certificate_number' => $certificateNumber,
+            'approved_by'        => auth()->id(),
+            'approved_at'        => now(),
+        ]);
+
+        // Auto-create verified DonationHistory record
+        $donor = $claim->user;
+        DonationHistory::create([
+            'donor_id'      => $claim->user_id,
+            'blood_group'   => $donor->blood_group,
+            'donation_date' => $claim->donation_date,
+            'units'         => 1,
+            'hospital_name' => $claim->hospital_name,
+            'location'      => $claim->location,
+            'notes'         => $claim->notes,
+            'verified_by'   => auth()->id(),
+            'status'        => 'verified',
+        ]);
+
+        // Update donor stats
+        $donor->increment('total_donations');
+        if (!$donor->last_donation_date || $claim->donation_date->greaterThan($donor->last_donation_date)) {
+            $donor->update(['last_donation_date' => $claim->donation_date]);
+        }
+
+        $claim->user->notify(new DonationClaimApproved($claim));
+
+        return back()->with('success', __('ui.certificate.claim_approved', ['cert' => $certificateNumber]));
+    }
+
+    public function rejectClaim(Request $request, DonationClaim $claim)
+    {
+        if ($claim->status !== 'pending') {
+            return back()->withErrors(['claim' => __('ui.certificate.already_processed')]);
+        }
+
+        $claim->update([
+            'status'           => 'rejected',
+            'rejection_reason' => $request->rejection_reason,
+        ]);
+
+        $claim->user->notify(new DonationClaimRejected($claim));
+
+        return back()->with('success', __('ui.certificate.claim_rejected'));
+    }
+
+    // ─── Admin as Donor: Blood Requests ────────────────────────
+    public function myBloodRequests()
+    {
+        $requests = BloodRequest::where('requester_id', Auth::id())->latest()->paginate(10);
+        return view('admin.my-blood-requests', compact('requests'));
+    }
+
+    public function createMyBloodRequest(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_name'     => 'required|string|max:255',
+            'blood_group'      => 'required|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'units_needed'     => 'required|integer|min:1|max:10',
+            'hospital_name'    => 'required|string|max:255',
+            'hospital_address' => 'nullable|string|max:500',
+            'contact_number'   => 'required|string|max:20',
+            'needed_date'      => 'required|date|after_or_equal:today',
+            'urgency'          => 'required|in:normal,urgent,emergency',
+            'reason'           => 'nullable|string|max:500',
+        ]);
+
+        $validated['requester_id'] = Auth::id();
+        $bloodRequest = BloodRequest::create($validated);
+        $bloodRequest->load('requester');
+
+        User::where('role', 'sub_admin')
+            ->whereJsonContains('permissions', 'manage_blood_requests')
+            ->get()
+            ->each(fn($admin) => $admin->notify(new NewBloodRequestCreated($bloodRequest)));
+
+        return back()->with('success', __('ui.messages.request_submitted'));
+    }
+
+    // ─── Admin as Donor: Donation History ──────────────────────
+    public function myDonations()
+    {
+        $donations = DonationHistory::where('donor_id', Auth::id())->latest()->paginate(10);
+        return view('admin.my-donations', compact('donations'));
+    }
+
+    public function submitMyDonation(Request $request)
+    {
+        $validated = $request->validate([
+            'donation_date'  => 'required|date|before_or_equal:today',
+            'hospital_name'  => 'nullable|string|max:255',
+            'location'       => 'nullable|string|max:255',
+            'recipient_name' => 'nullable|string|max:255',
+            'units'          => 'nullable|integer|min:1|max:3',
+            'notes'          => 'nullable|string|max:500',
+        ]);
+
+        $user = Auth::user();
+        abort_if(!$user->blood_group, 422, 'Set your blood group in profile first.');
+
+        $validated['donor_id']    = $user->id;
+        $validated['blood_group'] = $user->blood_group;
+        $validated['status']      = 'pending';
+
+        $donation = DonationHistory::create($validated);
+
+        User::where('role', 'sub_admin')
+            ->whereJsonContains('permissions', 'manage_donations')
+            ->get()
+            ->each(fn($a) => $a->notify(new NewDonationSubmitted($donation)));
+
+        return back()->with('success', __('ui.messages.donation_submitted'));
+    }
+
+    // ─── Admin as Donor: Certificate Claims ────────────────────
+    public function myClaims()
+    {
+        $claims = DonationClaim::where('user_id', Auth::id())->latest()->paginate(10);
+        return view('admin.my-claims', compact('claims'));
+    }
+
+    public function submitMyClaim(Request $request)
+    {
+        $validated = $request->validate([
+            'donation_date' => 'required|date|before_or_equal:today',
+            'hospital_name' => 'nullable|string|max:255',
+            'location'      => 'nullable|string|max:255',
+            'notes'         => 'nullable|string|max:500',
+        ]);
+
+        $validated['user_id'] = Auth::id();
+        $claim = DonationClaim::create($validated);
+        $claim->load('user');
+
+        User::where('role', 'sub_admin')
+            ->whereJsonContains('permissions', 'manage_donations')
+            ->get()
+            ->each(fn($a) => $a->notify(new NewDonationClaimSubmitted($claim)));
+
+        return back()->with('success', __('ui.certificate.claim_submitted'));
+    }
+
+    public function myCertificate(DonationClaim $claim)
+    {
+        abort_unless(Auth::id() === $claim->user_id && $claim->status === 'approved', 403);
+        $claim->load('user', 'approver');
+
+        $qrSvg = QrCode::format('svg')->size(120)->color(220, 20, 60)->generate(
+            route('certificate.verify', $claim->certificate_number)
+        );
+
+        return view('admin.my-certificate', compact('claim', 'qrSvg'));
+    }
+
+    public function downloadMyCertificate(DonationClaim $claim)
+    {
+        abort_unless(Auth::id() === $claim->user_id && $claim->status === 'approved', 403);
+        $claim->load('user', 'approver');
+
+        $qrSvg = QrCode::format('svg')->size(150)->generate(
+            route('certificate.verify', $claim->certificate_number)
+        );
+
+        $avatarPath = public_path('uploads/profiles/' . $claim->user->profile_image);
+        $avatarBase64 = null;
+        if ($claim->user->profile_image && file_exists($avatarPath)) {
+            $ext  = pathinfo($avatarPath, PATHINFO_EXTENSION);
+            $mime = match (strtolower($ext)) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png'         => 'image/png',
+                default       => 'image/png',
+            };
+            $avatarBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($avatarPath));
+        }
+
+        $pdf = Pdf::loadView('certificate.pdf', compact('claim', 'qrSvg', 'avatarBase64'))
+            ->setPaper('A4', 'landscape')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('defaultFont', 'sans-serif');
+
+        return $pdf->download('certificate-' . $claim->certificate_number . '.pdf');
     }
 
     // ─── Sub Admin Management ───────────────────────────────

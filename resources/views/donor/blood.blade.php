@@ -109,31 +109,34 @@
     </div>
 </div>
 
+@php
+$donorI18n = [
+    'full_member'         => __('ui.donor_status.full_member'),
+    'temporary_member'    => __('ui.member.temporary_member'),
+    'total_donations'     => __('ui.profile.total_donations'),
+    'times'               => __('ui.common.times'),
+    'availability_col'    => __('ui.donor_list.availability_col'),
+    'available'           => __('ui.donor_list.available'),
+    'unavailable'         => __('ui.donor_list.unavailable'),
+    'can_donate_col'      => __('ui.donor_list.can_donate_col'),
+    'yes'                 => __('ui.common.yes'),
+    'cant_donate_note'    => __('ui.donor_list.cant_donate_note'),
+    'gender'              => __('ui.fields.gender'),
+    'gender_male'         => __('ui.gender.male'),
+    'gender_female'       => __('ui.gender.female'),
+    'gender_other'        => __('ui.gender.other'),
+    'last_donation'       => __('ui.profile.last_donation'),
+    'district_division'   => __('ui.donor_list.district_division'),
+    'phone'               => __('ui.fields.phone'),
+    'emergency_contact'   => __('ui.fields.emergency_contact'),
+    'address'             => __('ui.fields.address'),
+    'full_member_unlock'  => __('ui.donor_list.full_member_unlock'),
+    'loading_failed'      => __('ui.donor_list.loading_failed'),
+];
+@endphp
 @push('scripts')
 <script>
-    const donorI18n = @json([
-        'full_member'         => __('ui.donor_status.full_member'),
-        'temporary_member'    => __('ui.member.temporary_member'),
-        'total_donations'     => __('ui.profile.total_donations'),
-        'times'               => __('ui.common.times'),
-        'availability_col'    => __('ui.donor_list.availability_col'),
-        'available'           => __('ui.donor_list.available'),
-        'unavailable'         => __('ui.donor_list.unavailable'),
-        'can_donate_col'      => __('ui.donor_list.can_donate_col'),
-        'yes'                 => __('ui.common.yes'),
-        'cant_donate_note'    => __('ui.donor_list.cant_donate_note'),
-        'gender'              => __('ui.fields.gender'),
-        'gender_male'         => __('ui.gender.male'),
-        'gender_female'       => __('ui.gender.female'),
-        'gender_other'        => __('ui.gender.other'),
-        'last_donation'       => __('ui.profile.last_donation'),
-        'district_division'   => __('ui.donor_list.district_division'),
-        'phone'               => __('ui.fields.phone'),
-        'emergency_contact'   => __('ui.fields.emergency_contact'),
-        'address'             => __('ui.fields.address'),
-        'full_member_unlock'  => __('ui.donor_list.full_member_unlock'),
-        'loading_failed'      => __('ui.donor_list.loading_failed'),
-    ]);
+    const donorI18n = @json($donorI18n);
 
     const modal = new bootstrap.Modal(document.getElementById('donorProfileModal'));
 

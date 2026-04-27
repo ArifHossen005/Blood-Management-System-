@@ -55,6 +55,18 @@
                 </li>
             @endif
 
+            @if($u->hasPermission('manage_donations'))
+                <li>
+                    <a href="{{ route('admin.claims') }}" class="{{ request()->routeIs('admin.claims*') ? 'active' : '' }}">
+                        <i class="bi bi-award-fill"></i> {{ __('ui.certificate.donation_claims') }}
+                        @php $pendingClaimsCount = \App\Models\DonationClaim::where('status','pending')->count(); @endphp
+                        @if($pendingClaimsCount > 0)
+                            <span class="badge bg-warning text-dark ms-auto">{{ $pendingClaimsCount }}</span>
+                        @endif
+                    </a>
+                </li>
+            @endif
+
             @if($u->isMainAdmin())
                 <li class="nav-label">{{ __('ui.nav.access_control') }}</li>
                 <li>
@@ -76,6 +88,35 @@
                     </a>
                 </li>
             @endif
+
+            @if($u->blood_group)
+                <li class="nav-label">{{ __('ui.nav.as_donor') }}</li>
+                <li>
+                    <a href="{{ route('admin.my-blood-requests') }}" class="{{ request()->routeIs('admin.my-blood-requests*') ? 'active' : '' }}">
+                        <i class="bi bi-heart-pulse-fill"></i> {{ __('ui.nav.my_blood_requests') }}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('admin.my-donations') }}" class="{{ request()->routeIs('admin.my-donations*') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history"></i> {{ __('ui.nav.my_donations') }}
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('admin.my-claims') }}" class="{{ request()->routeIs('admin.my-claims*') || request()->routeIs('admin.my-certificate*') ? 'active' : '' }}">
+                        <i class="bi bi-award-fill"></i> {{ __('ui.nav.my_claims') }}
+                    </a>
+                </li>
+            @endif
+
+            <li class="nav-label">{{ __('ui.notifications.title') }}</li>
+            <li>
+                <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+                    <i class="bi bi-bell-fill"></i> {{ __('ui.notifications.title') }}
+                    @if($unreadCount > 0)
+                        <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
+                    @endif
+                </a>
+            </li>
         @else
             {{-- Donor Navigation --}}
             <li class="nav-label">{{ __('ui.nav.main_menu') }}</li>
@@ -96,6 +137,15 @@
                 </a>
             </li>
             <li>
+                <a href="{{ route('donor.claims') }}" class="{{ request()->routeIs('donor.claims*') || request()->routeIs('donor.certificate*') ? 'active' : '' }}">
+                    <i class="bi bi-award-fill"></i> {{ __('ui.certificate.my_claims') }}
+                    @php $myApproved = \App\Models\DonationClaim::where('user_id', auth()->id())->where('status','approved')->count(); @endphp
+                    @if($myApproved > 0)
+                        <span class="badge bg-success ms-auto">{{ $myApproved }}</span>
+                    @endif
+                </a>
+            </li>
+            <li>
                 <a href="{{ route('donor.blood-requests') }}" class="{{ request()->routeIs('donor.blood-requests') ? 'active' : '' }}">
                     <i class="bi bi-heart-pulse-fill"></i> {{ __('ui.nav.blood_requests') }}
                 </a>
@@ -104,6 +154,14 @@
             <li>
                 <a href="{{ route('donor.profile') }}" class="{{ request()->routeIs('donor.profile') ? 'active' : '' }}">
                     <i class="bi bi-person-fill"></i> {{ __('ui.nav.profile') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+                    <i class="bi bi-bell-fill"></i> {{ __('ui.notifications.title') }}
+                    @if($unreadCount > 0)
+                        <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
+                    @endif
                 </a>
             </li>
         @endif

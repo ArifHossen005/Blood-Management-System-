@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\DonorController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ThemeController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +25,20 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// ─── Notifications (shared: admin + donor) ───────────────────
+Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/',                         [NotificationController::class, 'index'])->name('index');
+    Route::get('/unread-count',             [NotificationController::class, 'unreadCount'])->name('unread-count');
+    Route::post('/read-all',                [NotificationController::class, 'markAllRead'])->name('read-all');
+    Route::post('/{id}/read',               [NotificationController::class, 'markRead'])->name('read');
+    Route::delete('/{id}',                  [NotificationController::class, 'destroy'])->name('destroy');
+});
+
+// ─── Public Certificate Routes ──────────────────────────────
+Route::get('/certificate/share/{certificateNumber}', [CertificateController::class, 'share'])->name('certificate.share');
+Route::get('/certificate/{certificateNumber}/og-image', [CertificateController::class, 'ogImage'])->name('certificate.og-image');
+Route::get('/verify/{certificateNumber}', [CertificateController::class, 'verify'])->name('certificate.verify');
+
 // ─── Admin + Sub Admin shared routes ────────────────────────
 // Both roles access /admin/* — sub_admin gated by per-route permission middleware.
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,sub_admin'])->group(function () {
@@ -30,6 +46,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,sub_admi
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/donor-profile', [AdminController::class, 'updateDonorProfile'])->name('donor-profile.update');
     Route::put('/change-password', [AdminController::class, 'changePassword'])->name('password.change');
 
     // Donor list (read) — approve_donors OR edit_donors
@@ -63,6 +80,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,sub_admi
         ->middleware('permission:view_donations,manage_donations')->name('donation-histories');
     Route::patch('/donation-histories/{history}/verify', [AdminController::class, 'verifyDonation'])
         ->middleware('permission:manage_donations')->name('donation-histories.verify');
+
+    // Donation claims & certificates
+    Route::get('/claims', [AdminController::class, 'claims'])
+        ->middleware('permission:manage_donations')->name('claims');
+    Route::patch('/claims/{claim}/approve', [AdminController::class, 'approveClaim'])
+        ->middleware('permission:manage_donations')->name('claims.approve');
+    Route::patch('/claims/{claim}/reject', [AdminController::class, 'rejectClaim'])
+        ->middleware('permission:manage_donations')->name('claims.reject');
+
+    // Admin acting as donor (self-service — no extra permission needed)
+    Route::get('/my-blood-requests', [AdminController::class, 'myBloodRequests'])->name('my-blood-requests');
+    Route::post('/my-blood-requests', [AdminController::class, 'createMyBloodRequest'])->name('my-blood-requests.store');
+    Route::get('/my-donations', [AdminController::class, 'myDonations'])->name('my-donations');
+    Route::post('/my-donations', [AdminController::class, 'submitMyDonation'])->name('my-donations.store');
+    Route::get('/my-claims', [AdminController::class, 'myClaims'])->name('my-claims');
+    Route::post('/my-claims', [AdminController::class, 'submitMyClaim'])->name('my-claims.store');
+    Route::get('/my-certificate/{claim}', [AdminController::class, 'myCertificate'])->name('my-certificate');
+    Route::get('/my-certificate/{claim}/download', [AdminController::class, 'downloadMyCertificate'])->name('my-certificate.download');
 });
 
 // ─── Main Admin exclusive routes ────────────────────────────
@@ -100,4 +135,10 @@ Route::prefix('donor')->name('donor.')->middleware(['auth', 'role:donor'])->grou
     // Blood requests
     Route::get('/blood-requests', [DonorController::class, 'bloodRequests'])->name('blood-requests');
     Route::post('/blood-requests', [DonorController::class, 'createBloodRequest'])->name('blood-requests.store');
+
+    // Donation claims & certificates
+    Route::get('/claims', [DonorController::class, 'claims'])->name('claims');
+    Route::post('/claims', [DonorController::class, 'submitClaim'])->name('claims.store');
+    Route::get('/certificate/{claim}', [CertificateController::class, 'view'])->name('certificate');
+    Route::get('/certificate/{claim}/download', [CertificateController::class, 'download'])->name('certificate.download');
 });

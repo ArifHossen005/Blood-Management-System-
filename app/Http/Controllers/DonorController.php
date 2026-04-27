@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\BloodRequest;
+use App\Models\DonationClaim;
 use App\Models\DonationHistory;
+use App\Notifications\NewBloodRequestCreated;
+use App\Notifications\NewDonationClaimSubmitted;
+use App\Notifications\NewDonationSubmitted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -104,7 +108,14 @@ class DonorController extends Controller
     // ─── Blood Page (Donor List) ────────────────────────────
     public function bloodPage(Request $request)
     {
-        $query = User::donors()->approved()->available();
+        $query = User::where(function ($q) {
+            $q->where('role', 'donor')->where('status', 'approved')->where('is_available', true);
+        })->orWhere(function ($q) {
+            $q->whereIn('role', ['admin', 'sub_admin'])
+              ->whereNotNull('blood_group')
+              ->where('blood_group', '!=', '')
+              ->where('is_available', true);
+        });
 
         if ($request->filled('blood_group')) {
             $query->where('blood_group', $request->blood_group);
@@ -185,9 +196,50 @@ class DonorController extends Controller
         $validated['blood_group'] = Auth::user()->blood_group;
         $validated['status']      = 'pending'; // needs admin verification
 
-        DonationHistory::create($validated);
+        $donation = DonationHistory::create($validated);
+
+        User::where('role', 'admin')
+            ->orWhere(function ($q) {
+                $q->where('role', 'sub_admin')
+                  ->whereJsonContains('permissions', 'manage_donations');
+            })
+            ->get()
+            ->each(fn($admin) => $admin->notify(new NewDonationSubmitted($donation)));
 
         return back()->with('success', __('ui.messages.donation_submitted'));
+    }
+
+    // ─── Donation Claims ────────────────────────────────────────
+    public function claims()
+    {
+        $claims = DonationClaim::where('user_id', Auth::id())->latest()->paginate(10);
+        return view('donor.claims', compact('claims'));
+    }
+
+    public function submitClaim(Request $request)
+    {
+        $validated = $request->validate([
+            'donation_date'    => 'required|date|before_or_equal:today',
+            'hospital_name'    => 'nullable|string|max:255',
+            'location'         => 'nullable|string|max:255',
+            'blood_request_id' => 'nullable|exists:blood_requests,id',
+            'notes'            => 'nullable|string|max:500',
+        ]);
+
+        $validated['user_id'] = Auth::id();
+
+        $claim = DonationClaim::create($validated);
+        $claim->load('user');
+
+        User::where('role', 'admin')
+            ->orWhere(function ($q) {
+                $q->where('role', 'sub_admin')
+                  ->whereJsonContains('permissions', 'manage_donations');
+            })
+            ->get()
+            ->each(fn($admin) => $admin->notify(new NewDonationClaimSubmitted($claim)));
+
+        return back()->with('success', __('ui.certificate.claim_submitted'));
     }
 
     // ─── Blood Requests ─────────────────────────────────────
@@ -213,7 +265,16 @@ class DonorController extends Controller
 
         $validated['requester_id'] = Auth::id();
 
-        BloodRequest::create($validated);
+        $bloodRequest = BloodRequest::create($validated);
+        $bloodRequest->load('requester');
+
+        User::where('role', 'admin')
+            ->orWhere(function ($q) {
+                $q->where('role', 'sub_admin')
+                  ->whereJsonContains('permissions', 'manage_blood_requests');
+            })
+            ->get()
+            ->each(fn($admin) => $admin->notify(new NewBloodRequestCreated($bloodRequest)));
 
         return back()->with('success', __('ui.messages.request_submitted'));
     }

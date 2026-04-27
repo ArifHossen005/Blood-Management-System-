@@ -5,8 +5,3 @@ URLকী করেhttp://127.0.0.1:8000/admin/dashboardড্যাশবোর
 🩸 Donor
 URLকী করেhttp://127.0.0.1:8000/donor/dashboardড্যাশবোর্ডhttp://127.0.0.1:8000/donor/bloodরক্তদাতা তালিকাhttp://127.0.0.1:8000/donor/profileপ্রোফাইলhttp://127.0.0.1:8000/donor/donationsদানের ইতিহাসhttp://127.0.0.1:8000/donor/blood-requestsরক্তের অনুরোধ
 
-
-
-adress dynamic 
-ban vs english 
-hospital dynamic 
