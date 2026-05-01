@@ -53,20 +53,24 @@
                         <input type="number" step="0.1" class="form-control" name="weight" value="{{ old('weight', $user->weight) }}">
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">{{ __('ui.fields.address') }}</label>
+                        <label class="form-label fw-semibold">{{ __('ui.fields.address') }} <small class="text-muted">(Village / Road / House)</small></label>
                         <input type="text" class="form-control" name="address" value="{{ old('address', $user->address) }}">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('ui.fields.city') }}</label>
-                        <input type="text" class="form-control" name="city" value="{{ old('city', $user->city) }}">
+                        <label class="form-label fw-semibold">{{ __('ui.fields.district') }}</label>
+                        <select class="form-select" id="profile_district" name="district">
+                            <option value="">-- Select District --</option>
+                        </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('ui.fields.district') }}</label>
-                        <input type="text" class="form-control" name="district" value="{{ old('district', $user->district) }}">
+                        <label class="form-label fw-semibold">Upazila / Area</label>
+                        <select class="form-select" id="profile_upazila" name="city">
+                            <option value="">-- Select Upazila --</option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">{{ __('ui.fields.division') }}</label>
-                        <input type="text" class="form-control" name="division" value="{{ old('division', $user->division) }}">
+                        <input type="text" class="form-control bg-light" id="profile_division" name="division" value="{{ old('division', $user->division) }}" readonly placeholder="Auto-filled">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ __('ui.fields.emergency_contact') }}</label>
@@ -160,4 +164,18 @@
         </div>
     </div>
 </div>
+@push('scripts')
+@include('partials.bd-districts-data')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initDistrictDropdown({
+        districtId: 'profile_district',
+        upazilaId:  'profile_upazila',
+        divisionId: 'profile_division',
+        currentDistrict: '{{ old('district', $user->district) }}',
+        currentUpazila:  '{{ old('city', $user->city) }}'
+    });
+});
+</script>
+@endpush
 @endsection

@@ -28,9 +28,12 @@ class CertificateController extends Controller
         abort_unless(Auth::id() === $claim->user_id && $claim->status === 'approved', 403);
         $claim->load('user', 'approver');
 
-        $qrSvg = QrCode::format('svg')->size(150)->generate(
+        // SVG as base64 data URI — works without Imagick; dompdf renders it via <img>
+        $qrSvg = QrCode::format('svg')->size(80)->color(220, 20, 60)->generate(
             route('certificate.verify', $claim->certificate_number)
         );
+        $svgClean = trim(preg_replace('/\<\?xml[^\?]*\?\>/', '', (string) $qrSvg));
+        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($svgClean);
 
         // Donor avatar as base64 for dompdf
         $avatarPath = public_path('uploads/profiles/' . $claim->user->profile_image);
@@ -45,10 +48,16 @@ class CertificateController extends Controller
             $avatarBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($avatarPath));
         }
 
-        $pdf = Pdf::loadView('certificate.pdf', compact('claim', 'qrSvg', 'avatarBase64'))
+        $pdf = Pdf::loadView('certificate.pdf', compact('claim', 'qrBase64', 'avatarBase64'))
             ->setPaper('A4', 'landscape')
             ->setOption('isRemoteEnabled', true)
-            ->setOption('defaultFont', 'sans-serif');
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->setOption('margin_top', 0)
+            ->setOption('margin_right', 0)
+            ->setOption('margin_bottom', 0)
+            ->setOption('margin_left', 0)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('dpi', 96);
 
         return $pdf->download('certificate-' . $claim->certificate_number . '.pdf');
     }

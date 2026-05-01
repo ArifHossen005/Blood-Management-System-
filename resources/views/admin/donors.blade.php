@@ -64,10 +64,12 @@
                         <td>{{ $loop->iteration + ($donors->currentPage() - 1) * $donors->perPage() }}</td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <img src="{{ $donor->profile_image_url }}" alt="" width="32" height="32" class="rounded-circle" style="object-fit:cover;">
+                                <a href="{{ route('admin.donors.edit', $donor) }}" class="text-decoration-none">
+                                    <img src="{{ $donor->profile_image_url }}" alt="" width="32" height="32" class="rounded-circle" style="object-fit:cover;">
+                                </a>
                                 <div>
-                                    <div class="fw-semibold">{{ $donor->name }}</div>
-                                    <small class="text-muted">{{ $donor->email }}</small>
+                                    <a href="{{ route('admin.donors.edit', $donor) }}" class="fw-semibold text-decoration-none" style="color:#DC143C;">{{ $donor->name }}</a>
+                                    <br><small class="text-muted">{{ $donor->email }}</small>
                                 </div>
                             </div>
                         </td>

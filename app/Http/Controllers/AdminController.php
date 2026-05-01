@@ -475,26 +475,30 @@ class AdminController extends Controller
         abort_unless(Auth::id() === $claim->user_id && $claim->status === 'approved', 403);
         $claim->load('user', 'approver');
 
-        $qrSvg = QrCode::format('svg')->size(150)->generate(
+        $qrSvg = QrCode::format('svg')->size(80)->color(220, 20, 60)->generate(
             route('certificate.verify', $claim->certificate_number)
         );
+        $svgClean = trim(preg_replace('/\<\?xml[^\?]*\?\>/', '', (string) $qrSvg));
+        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($svgClean);
 
-        $avatarPath = public_path('uploads/profiles/' . $claim->user->profile_image);
         $avatarBase64 = null;
+        $avatarPath   = public_path('uploads/profiles/' . $claim->user->profile_image);
         if ($claim->user->profile_image && file_exists($avatarPath)) {
-            $ext  = pathinfo($avatarPath, PATHINFO_EXTENSION);
-            $mime = match (strtolower($ext)) {
-                'jpg', 'jpeg' => 'image/jpeg',
-                'png'         => 'image/png',
-                default       => 'image/png',
-            };
+            $ext  = strtolower(pathinfo($avatarPath, PATHINFO_EXTENSION));
+            $mime = ($ext === 'jpg' || $ext === 'jpeg') ? 'image/jpeg' : 'image/png';
             $avatarBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($avatarPath));
         }
 
-        $pdf = Pdf::loadView('certificate.pdf', compact('claim', 'qrSvg', 'avatarBase64'))
+        $pdf = Pdf::loadView('certificate.pdf', compact('claim', 'qrBase64', 'avatarBase64'))
             ->setPaper('A4', 'landscape')
             ->setOption('isRemoteEnabled', true)
-            ->setOption('defaultFont', 'sans-serif');
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->setOption('margin_top', 0)
+            ->setOption('margin_right', 0)
+            ->setOption('margin_bottom', 0)
+            ->setOption('margin_left', 0)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('dpi', 96);
 
         return $pdf->download('certificate-' . $claim->certificate_number . '.pdf');
     }

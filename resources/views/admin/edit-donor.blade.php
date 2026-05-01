@@ -47,16 +47,24 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">{{ __('ui.fields.address') }}</label>
+                        <label class="form-label fw-semibold">{{ __('ui.fields.address') }} <small class="text-muted">(Village / Road / House)</small></label>
                         <input type="text" class="form-control" name="address" value="{{ old('address', $user->address) }}">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold">{{ __('ui.fields.district') }}</label>
-                        <input type="text" class="form-control" name="district" value="{{ old('district', $user->district) }}">
+                        <select class="form-select" id="edit_district" name="district">
+                            <option value="">-- Select District --</option>
+                        </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Upazila / Area</label>
+                        <select class="form-select" id="edit_upazila" name="city">
+                            <option value="">-- Select Upazila --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold">{{ __('ui.fields.division') }}</label>
-                        <input type="text" class="form-control" name="division" value="{{ old('division', $user->division) }}">
+                        <input type="text" class="form-control bg-light" id="edit_division" name="division" value="{{ old('division', $user->division) }}" readonly placeholder="Auto-filled">
                     </div>
 
                     {{-- Admin Controls --}}
@@ -104,4 +112,18 @@
         </div>
     </div>
 </div>
+@push('scripts')
+@include('partials.bd-districts-data')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initDistrictDropdown({
+        districtId: 'edit_district',
+        upazilaId:  'edit_upazila',
+        divisionId: 'edit_division',
+        currentDistrict: '{{ old('district', $user->district) }}',
+        currentUpazila:  '{{ old('city', $user->city) }}'
+    });
+});
+</script>
+@endpush
 @endsection

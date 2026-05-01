@@ -29,7 +29,12 @@
         </div>
         <div class="col-md-3">
             <label class="form-label fw-semibold" style="font-size:0.82rem;">{{ __('ui.fields.district') }}</label>
-            <input type="text" class="form-control form-control-sm" name="district" value="{{ request('district') }}" placeholder="{{ __('ui.donor_list.district_placeholder') }}">
+            <select class="form-select form-select-sm" name="district">
+                <option value="">-- All Districts --</option>
+                @foreach(['Dhaka','Faridpur','Gazipur','Gopalganj','Kishoreganj','Madaripur','Manikganj','Munshiganj','Narayanganj','Narsingdi','Rajbari','Shariatpur','Tangail','Bandarban','Brahmanbaria','Chandpur','Chattogram','Cumilla',"Cox's Bazar",'Feni','Khagrachhari','Lakshmipur','Noakhali','Rangamati','Bogura','Chapai Nawabganj','Joypurhat','Naogaon','Natore','Pabna','Rajshahi','Sirajganj','Bagerhat','Chuadanga','Jashore','Jhenaidah','Khulna','Kushtia','Magura','Meherpur','Narail','Satkhira','Barguna','Barishal','Bhola','Jhalokati','Patuakhali','Pirojpur','Habiganj','Moulvibazar','Sunamganj','Sylhet','Dinajpur','Gaibandha','Kurigram','Lalmonirhat','Nilphamari','Panchagarh','Rangpur','Thakurgaon','Jamalpur','Mymensingh','Netrokona','Sherpur'] as $d)
+                    <option value="{{ $d }}" {{ request('district') == $d ? 'selected' : '' }}>{{ $d }}</option>
+                @endforeach
+            </select>
         </div>
         <div class="col-md-2">
             <button class="btn btn-blood btn-sm w-100"><i class="bi bi-search me-1"></i>{{ __('ui.common.search_cta') }}</button>
@@ -49,7 +54,9 @@
                 <span class="blood-badge">{{ $donor->blood_group }}</span>
                 <div class="text-center px-3 pb-3">
                     <img src="{{ $donor->profile_image_url }}" alt="{{ $donor->name }}" class="donor-avatar">
-                    <h6 class="fw-bold mt-2 mb-1">{{ $donor->name }}</h6>
+                    <h6 class="fw-bold mt-2 mb-1">
+                        <span class="donor-name-link" style="color:#DC143C;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">{{ $donor->name }}</span>
+                    </h6>
                     <div class="mb-2">
                         @if($donor->is_available)
                             <span class="status-dot available"></span><small class="text-success">{{ __('ui.donor_list.available') }}</small>

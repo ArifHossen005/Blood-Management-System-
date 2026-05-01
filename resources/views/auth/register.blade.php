@@ -147,7 +147,10 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">{{ __('ui.fields.district') }}</label>
-                        <input type="text" class="form-control" name="district" value="{{ old('district') }}" placeholder="{{ __('ui.fields.district_example') }}">
+                        <select class="form-select" id="reg_district" name="district">
+                            <option value="">-- Select District --</option>
+                        </select>
+                        <input type="hidden" name="division" id="reg_division">
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">{{ __('ui.fields.address') }}</label>
@@ -181,5 +184,17 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @include('partials.bd-districts-data')
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initDistrictDropdown({
+            districtId: 'reg_district',
+            upazilaId: 'reg_upazila_unused',
+            divisionId: 'reg_division',
+            currentDistrict: '{{ old('district') }}'
+        });
+    });
+    </script>
+    <select id="reg_upazila_unused" style="display:none;"></select>
 </body>
 </html>
